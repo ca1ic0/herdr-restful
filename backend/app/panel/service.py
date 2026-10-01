@@ -349,9 +349,15 @@ class PanelService:
             return 422, "unsupported", "action not offered by the current prompt"
 
         if card.source == "new_prompt" and body.action == ACT_CONTINUE:
-            prompt = card.meta.get("prompt") or settings.panel_continue_prompt
-            if body.prompt is not None and body.prompt != prompt:
-                return 409, "stale_context", "prompt text changed"
+            # The context token still binds this action to the live terminal
+            # state and the gateway's card. A panel may supply its own prompt,
+            # shown verbatim on its confirmation screen, without changing the
+            # host-wide default for other devices.
+            prompt = body.prompt if body.prompt is not None else (
+                card.meta.get("prompt") or settings.panel_continue_prompt
+            )
+            if not prompt.strip() or len(prompt.encode("utf-8")) > 160:
+                return 422, "unsupported", "continue prompt must be 1-160 UTF-8 bytes"
             await self.client.call(
                 "agent.prompt", {"target": pane_id, "prompt": prompt, "submit": True}
             )

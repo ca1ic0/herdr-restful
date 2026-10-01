@@ -336,6 +336,47 @@ async def test_idle_agent_offers_continue(panel_client, world):
     assert world["sent_keys"] == []
 
 
+async def test_panel_can_send_its_confirmed_continue_prompt(panel_client, world):
+    world["status"] = "idle"
+    world["screen"] = list(IDLE_SCREEN)
+    r = await panel_client.get("/api/v1/panel/agents/term_a", headers=DEVICE)
+    token = r.json()["pending"]["context_token"]
+    custom_prompt = "继续当前任务，并先说明下一步。"
+
+    r = await panel_client.post(
+        "/api/v1/panel/agents/term_a/actions",
+        headers=DEVICE,
+        json={
+            "action": "continue",
+            "context_token": token,
+            "request_id": "req-custom-prompt",
+            "prompt": custom_prompt,
+        },
+    )
+    assert r.status_code == 200
+    assert world["sent_prompts"] == [custom_prompt]
+
+
+async def test_panel_rejects_overlong_continue_prompt(panel_client, world):
+    world["status"] = "idle"
+    world["screen"] = list(IDLE_SCREEN)
+    r = await panel_client.get("/api/v1/panel/agents/term_a", headers=DEVICE)
+    token = r.json()["pending"]["context_token"]
+
+    r = await panel_client.post(
+        "/api/v1/panel/agents/term_a/actions",
+        headers=DEVICE,
+        json={
+            "action": "continue",
+            "context_token": token,
+            "request_id": "req-overlong-prompt",
+            "prompt": "中" * 54,
+        },
+    )
+    assert r.status_code == 422
+    assert world["sent_prompts"] == []
+
+
 async def test_unrecognized_screen_offers_no_choices(panel_client, world):
     world["screen"] = [" Applying edits…", ""]
     r = await panel_client.get("/api/v1/panel/agents/term_a", headers=DEVICE)
