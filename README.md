@@ -125,10 +125,39 @@ npm run dev          # http://localhost:5173, proxies /api to :8080
 
 Set `HERDR_RESTFUL_URL` if the backend is not on `http://127.0.0.1:8080`.
 
+## Device panel gateway (`/api/v1/panel`)
+
+`backend/app/panel/` implements the bounded, authenticated API used by the
+Herdr ESP32 decision panel (see the `herdr-esp32-panel` repo docs):
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/v1/panel/overview` | ≤24 agent cards + `total_count`, projected from `session.snapshot` |
+| `GET` | `/api/v1/panel/agents/{terminal_id}` | Sanitised visible output + pending card + 10 s `context_token` |
+| `POST` | `/api/v1/panel/agents/{terminal_id}/actions` | Semantic action with live revalidation and at-most-once execution |
+
+Every route requires a per-device Bearer token. Generate one per device and
+hand it to the device's provisioning page:
+
+```bash
+cd backend
+.venv/bin/python -m app.panel.tokens
+export HERDR_RESTFUL_PANEL_TOKENS=hp_xxx[,hp_yyy]
+```
+
+Safety properties: action `request_id`s are persisted in SQLite *before* any
+key is sent (replays return the recorded result, never re-send), every
+action re-reads the live screen and refuses with `409 stale_context` when
+the situation changed, and adapters only map prompts they have tested
+samples for (Claude numbered/yes-no menus today; OpenCode/Pi report
+`unrecognized` until real samples exist). Configure with
+`HERDR_RESTFUL_PANEL_SECRET` (context-token HMAC), `HERDR_RESTFUL_PANEL_DB_PATH`,
+`HERDR_RESTFUL_PANEL_CONTEXT_TTL`, `HERDR_RESTFUL_PANEL_CONTINUE_PROMPT`.
+
 ## Tests
 
 ```bash
-# backend: 52 tests against an in-process fake herdr socket server
+# backend: 64 tests against an in-process fake herdr socket server
 cd backend && .venv/bin/python -m pytest -q
 
 # frontend: 19 tests (snapshot + event reducer, and a jsdom render of the dashboard)

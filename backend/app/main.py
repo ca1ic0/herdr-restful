@@ -26,6 +26,7 @@ from .api import (
 from .config import settings
 from .deps import call_herdr
 from .herdr.client import HerdrClient
+from .panel.api import router as panel_router
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,7 @@ def create_app() -> FastAPI:
     api.include_router(events.router)
     api.include_router(notifications.router)
     api.include_router(integrations.router)
+    api.include_router(panel_router)
     app.include_router(api)
 
     @app.get("/api/v1/health", tags=["server"])

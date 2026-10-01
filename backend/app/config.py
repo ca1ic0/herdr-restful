@@ -45,9 +45,39 @@ class Settings(BaseSettings):
     )
     sse_heartbeat: float = Field(default=15.0, description="SSE heartbeat interval in seconds")
 
+    # device panel gateway (/api/v1/panel)
+    panel_tokens: str = Field(
+        default="",
+        description="Comma-separated per-device bearer tokens for the panel API",
+    )
+    panel_secret: str | None = Field(
+        default=None,
+        description="HMAC secret for panel context tokens; random per boot if unset",
+    )
+    panel_db_path: str | None = Field(
+        default=None,
+        description="SQLite path for panel action idempotency records",
+    )
+    panel_context_ttl: float = Field(
+        default=10.0, description="Seconds a panel context token stays valid"
+    )
+    panel_continue_prompt: str = Field(
+        default="继续当前任务，并先说明下一步。",
+        description="Prompt text sent by the panel 'continue' action",
+    )
+
     @property
     def herdr_config_dir(self) -> Path:
         return default_herdr_config_dir()
+
+    @property
+    def panel_token_list(self) -> list[str]:
+        return [t.strip() for t in self.panel_tokens.split(",") if t.strip()]
+
+    def resolve_panel_db_path(self) -> Path:
+        if self.panel_db_path:
+            return Path(self.panel_db_path).expanduser()
+        return self.herdr_config_dir / "panel_actions.db"
 
     def resolve_socket_path(self) -> Path:
         """Resolve the herdr socket path using the documented precedence."""
