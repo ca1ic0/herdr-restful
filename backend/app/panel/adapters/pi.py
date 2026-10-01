@@ -17,7 +17,7 @@ class PiAdapter:
         if herdr_status == "blocked":
             return PromptCard(
                 kind=KIND_UNRECOGNIZED,
-                summary="Pi 审批提示需要已知扩展适配",
+                summary="Pi approvals need a known extension adapter",
             )
         return PromptCard(kind=KIND_NONE)
 

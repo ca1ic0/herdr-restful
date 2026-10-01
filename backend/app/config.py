@@ -62,7 +62,7 @@ class Settings(BaseSettings):
         default=10.0, description="Seconds a panel context token stays valid"
     )
     panel_continue_prompt: str = Field(
-        default="继续当前任务，并先说明下一步。",
+        default="Continue the current task, and first explain the next step.",
         description="Prompt text sent by the panel 'continue' action",
     )
 

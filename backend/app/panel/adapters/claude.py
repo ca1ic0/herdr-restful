@@ -87,7 +87,7 @@ class ClaudeAdapter:
         if ACT_ALLOW_ONCE not in options or ACT_DENY not in options:
             return PromptCard(
                 kind=KIND_UNRECOGNIZED,
-                summary="Claude 提示选项无法完整识别",
+                summary="Claude prompt options not fully recognized",
                 evidence=[lines[q_idx]],
                 meta={"style": "numbered"},
             )
@@ -101,7 +101,7 @@ class ClaudeAdapter:
             evidence.insert(0, subject)
         return PromptCard(
             kind=KIND_APPROVAL,
-            summary=subject or "Claude 请求许可",
+            summary=subject or "Claude asks for permission",
             choices=choices,
             source="terminal_ui",
             evidence=evidence,
@@ -125,7 +125,7 @@ class ClaudeAdapter:
         evidence = ([subject] if subject else []) + [question]
         return PromptCard(
             kind=KIND_APPROVAL,
-            summary=subject or "Claude 请求许可",
+            summary=subject or "Claude asks for permission",
             choices=[ACT_ALLOW_ONCE, ACT_DENY],
             source="terminal_ui",
             evidence=evidence,

@@ -184,7 +184,7 @@ class PanelService:
         prompt = settings.panel_continue_prompt
         return PromptCard(
             kind=KIND_CONTINUATION,
-            summary="会话空闲，可发送继续提示词",
+            summary="Session idle; ready for a continue prompt",
             choices=[ACT_CONTINUE],
             source="new_prompt",
             evidence=[prompt],
@@ -203,12 +203,12 @@ class PanelService:
         impact = card.impact
         if card.kind not in (KIND_NONE,) and not impact:
             cwd = str(pane.get("cwd") or pane_id)
-            impact = f"在 {cwd} 的终端中执行，仅本次"
+            impact = f"Run in the terminal at {cwd}; applies this once"
         if len(card.summary) > MAX_SUMMARY_CHARS or len(impact) > MAX_IMPACT_CHARS:
             # never let a truncated card hide the impact of an action
             card = PromptCard(
                 kind=KIND_UNRECOGNIZED,
-                summary="内容过长，无法在小屏完整确认",
+                summary="Too long to confirm on the small screen",
                 impact="",
                 source="none",
             )
@@ -246,7 +246,7 @@ class PanelService:
             if status in ("idle", "done"):
                 return self._continuation_card(status)
             if status == "blocked":
-                return PromptCard(kind=KIND_UNRECOGNIZED, summary="无法识别当前提示")
+                return PromptCard(kind=KIND_UNRECOGNIZED, summary="Current prompt not recognized")
         return card
 
     async def detail(self, terminal_id: str) -> Detail:

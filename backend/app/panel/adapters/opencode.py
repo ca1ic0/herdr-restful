@@ -18,7 +18,7 @@ class OpenCodeAdapter:
         if herdr_status == "blocked":
             return PromptCard(
                 kind=KIND_UNRECOGNIZED,
-                summary="OpenCode 提示尚未适配",
+                summary="OpenCode prompts are not adapted yet",
             )
         return PromptCard(kind=KIND_NONE)
 

@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from app.config import settings
+from app.panel.auth import reset_auth_backoff
 
 from .fake_herdr import default_handler
 
@@ -119,7 +120,9 @@ async def panel_client(client, fake_herdr, world, tmp_path, monkeypatch):
     fake_herdr.handler = panel_handler(world)
     monkeypatch.setattr(settings, "panel_tokens", "test-device-token")
     monkeypatch.setattr(settings, "panel_db_path", str(tmp_path / "panel.db"))
+    reset_auth_backoff()
     yield client
+    reset_auth_backoff()
 
 
 async def test_requires_auth(panel_client):
@@ -129,6 +132,25 @@ async def test_requires_auth(panel_client):
         "/api/v1/panel/overview", headers={"Authorization": "Bearer wrong"}
     )
     assert r.status_code == 401
+
+
+async def test_short_code_normalisation(panel_client, monkeypatch):
+    """Pairing codes compare case- and separator-insensitively."""
+    monkeypatch.setattr(settings, "panel_tokens", "K7QX-2M9T-W4HB")
+    for typed in ("K7QX-2M9T-W4HB", "k7qx-2m9t-w4hb", "k7qx2m9tw4hb", "K7QX 2M9T W4HB"):
+        r = await panel_client.get(
+            "/api/v1/panel/overview", headers={"Authorization": f"Bearer {typed}"}
+        )
+        assert r.status_code == 200, typed
+
+
+async def test_auth_backoff_rate_limits(panel_client):
+    bad = {"Authorization": "Bearer wrong"}
+    assert (await panel_client.get("/api/v1/panel/overview", headers=bad)).status_code == 401
+    # backoff is active after the first wrong-token failure: next request
+    # is rejected with 429 even if it carries the correct token
+    r = await panel_client.get("/api/v1/panel/overview", headers=DEVICE)
+    assert r.status_code == 429
 
 
 async def test_overview_shape(panel_client):
