@@ -356,8 +356,12 @@ class PanelService:
             prompt = body.prompt if body.prompt is not None else (
                 card.meta.get("prompt") or settings.panel_continue_prompt
             )
-            if not prompt.strip() or len(prompt.encode("utf-8")) > 160:
-                return 422, "unsupported", "continue prompt must be 1-160 UTF-8 bytes"
+            if (
+                not prompt.strip()
+                or len(prompt.encode("utf-8")) > 160
+                or any((ord(ch) < 32 and ch != "\n") or ord(ch) == 127 for ch in prompt)
+            ):
+                return 422, "unsupported", "continue prompt must be visible and 1-160 UTF-8 bytes"
             await self.client.call(
                 "agent.prompt", {"target": pane_id, "prompt": prompt, "submit": True}
             )

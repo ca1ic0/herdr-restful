@@ -377,6 +377,26 @@ async def test_panel_rejects_overlong_continue_prompt(panel_client, world):
     assert world["sent_prompts"] == []
 
 
+async def test_panel_rejects_hidden_continue_prompt_control(panel_client, world):
+    world["status"] = "idle"
+    world["screen"] = list(IDLE_SCREEN)
+    r = await panel_client.get("/api/v1/panel/agents/term_a", headers=DEVICE)
+    token = r.json()["pending"]["context_token"]
+
+    r = await panel_client.post(
+        "/api/v1/panel/agents/term_a/actions",
+        headers=DEVICE,
+        json={
+            "action": "continue",
+            "context_token": token,
+            "request_id": "req-hidden-prompt",
+            "prompt": "继续\u001b[0m然后执行",
+        },
+    )
+    assert r.status_code == 422
+    assert world["sent_prompts"] == []
+
+
 async def test_unrecognized_screen_offers_no_choices(panel_client, world):
     world["screen"] = [" Applying edits…", ""]
     r = await panel_client.get("/api/v1/panel/agents/term_a", headers=DEVICE)
