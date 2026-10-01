@@ -171,6 +171,42 @@ async def test_overview_shape(panel_client):
     assert ag["herdr_status"] == "blocked"
 
 
+async def test_sound_events_baseline_transitions_and_no_replay(panel_client, world):
+    first = (await panel_client.get("/api/v1/panel/events", headers=DEVICE)).json()
+    assert first["events"] == []
+    assert first["next_cursor"] == first["latest_cursor"]
+    cursor = first["next_cursor"]
+
+    # First observation of an already blocked agent must be silent.
+    await panel_client.get("/api/v1/panel/overview", headers=DEVICE)
+    r = await panel_client.get(f"/api/v1/panel/events?after={cursor}", headers=DEVICE)
+    assert r.json()["events"] == []
+
+    world["status"] = "working"
+    await panel_client.get("/api/v1/panel/overview", headers=DEVICE)
+    world["status"] = "blocked"
+    await panel_client.get("/api/v1/panel/overview", headers=DEVICE)
+    await panel_client.get("/api/v1/panel/overview", headers=DEVICE)
+    r = await panel_client.get(f"/api/v1/panel/events?after={cursor}", headers=DEVICE)
+    body = r.json()
+    assert [e["kind"] for e in body["events"]] == ["request"]
+    assert body["events"][0]["source"] == "state_transition"
+    assert body["events"][0]["age_ms"] >= 0
+
+    cursor = body["next_cursor"]
+    world["status"] = "working"
+    await panel_client.get("/api/v1/panel/overview", headers=DEVICE)
+    world["status"] = "done"
+    await panel_client.get("/api/v1/panel/overview", headers=DEVICE)
+    r = await panel_client.get(f"/api/v1/panel/events?after={cursor}", headers=DEVICE)
+    assert [e["kind"] for e in r.json()["events"]] == ["done"]
+    assert (await panel_client.get("/api/v1/panel/events", headers=DEVICE)).json()["events"] == []
+
+
+async def test_sound_events_requires_auth(panel_client):
+    assert (await panel_client.get("/api/v1/panel/events")).status_code == 401
+
+
 async def test_detail_approval_card(panel_client):
     r = await panel_client.get("/api/v1/panel/agents/term_a", headers=DEVICE)
     assert r.status_code == 200

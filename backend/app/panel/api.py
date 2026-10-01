@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import Query
 from fastapi.responses import JSONResponse
 
 from ..herdr.errors import HerdrTransportError
@@ -34,6 +35,19 @@ async def overview(request: Request):
         return await service.overview()
     except HerdrTransportError as exc:
         raise _offline_http(exc) from exc
+
+
+@router.get("/events")
+async def sound_events(
+    request: Request,
+    after: str | None = Query(default=None, max_length=48),
+    limit: int = Query(default=16, ge=1, le=16),
+):
+    service = get_panel_service(request)
+    try:
+        return service.event_store.page(after, limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/agents/{terminal_id}")

@@ -34,6 +34,7 @@ from .adapters.base import (
     PromptCard,
 )
 from .idempotency import ActionStore
+from .events import PanelEventStore
 from .view_models import (
     MAX_AGENTS,
     MAX_IMPACT_CHARS,
@@ -84,6 +85,7 @@ class PanelService:
         self.client = client
         self.server_id = f"{socket.gethostname()}-boot-{uuid.uuid4().hex[:8]}"
         self.store = store or ActionStore(settings.resolve_panel_db_path())
+        self.event_store = PanelEventStore(self.server_id)
         self._term_locks: dict[str, asyncio.Lock] = {}
         self._locks_guard = asyncio.Lock()
 
@@ -156,6 +158,9 @@ class PanelService:
             )
 
         agents.sort(key=lambda a: order.get(a.terminal_id, 1 << 30))
+        updated = self.event_store.observe(agents)
+        for agent in agents:
+            agent.updated_at = updated.get(agent.terminal_id, now)
         return Overview(
             server_id=self.server_id,
             snapshot_at=now,
